@@ -10,23 +10,23 @@ servers = [
 ]
 
 # zone 檔路徑
-zone_file_path = "/CoreDNS/zones/db.kunzo.space"
+zone_file_path = "/CoreDNS/zones/db.<建議是你的 Domain name>"
 
 # SOA 設定，不用改
 soa_template = """$ORIGIN .
 $TTL 5      ; 1 day
-kunzo.space             IN SOA  ns2.kunzo.space. rachelsun5.gmail.com. (
+<你的 Domain name>             IN SOA  ns2.<你的 Domain name>. <你的電子信箱>. (
                                 {serial} ; serial
                                 10       ; refresh (1 hour)
                                 5       ; retry (30 minutes)
                                 300    ; expire (2 weeks)
                                 86400      ; minimum (1 day)
                                 )
-kunzo.space             IN NS      ns1.kunzo.space.
-kunzo.space             IN NS      ns2.kunzo.space.
-$ORIGIN kunzo.space.
-ns1                     IN A       209.97.161.115
-ns2                     IN A       159.203.21.136
+<你的 Domain name>             IN NS      ns1.<你的 Domain name>.
+<你的 Domain name>             IN NS      ns2.<你的 Domain name>.
+$ORIGIN <你的 Domain name>.
+ns1                     IN A       <你的 server IP>
+ns2                     IN A       <你的 server IP>
 $TTL 5 ; 1 minute
 """
 def check_health(ip):
@@ -38,10 +38,10 @@ def check_health(ip):
         return False
 
 def generate_zone(healthy_ips):
-    # 取得目前時間當 serial（格式：YYYYMMDDSS）（其實不用那麼快變換
-    serial = datetime.utcnow().strftime("%Y%m%d%S")
+    # 取得目前時間當 serial（格式：YYYYMMDDSS）（其實不用那麼快變換，這裡是為了讓它顯示得更快）
+    serial = datetime.utcnow().strftime("%Y%m%d%S") 
     zone_content = soa_template.format(serial=serial)
-    # 加入健康的 A 紀錄給根網域 @ 和 www
+    # 加入健康的 A 紀錄給根網域 @ 和 www，也可以看要加哪個自己選
     for ip in healthy_ips:
         zone_content += f"@                      IN A       {ip}\n"
     for ip in healthy_ips:
