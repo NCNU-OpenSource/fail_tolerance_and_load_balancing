@@ -5,8 +5,8 @@ from datetime import datetime
 
 # 伺服器清單（要健康檢查的 IP）
 servers = [
-    "138.197.59.192",
-    "146.190.147.94"
+    "<你要健康檢查的 server IP 1>",
+    "<你要健康檢查的 server IP 2>"
 ]
 
 # zone 檔路徑
