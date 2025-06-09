@@ -1,9 +1,8 @@
 .:53 {
-    bind 0.0.0.0
+    bind 0.0.0.0 127.0.0.1
     cache 5
     reload 5s
     file /CoreDNS/zones/db.kunzo.space kunzo.space. {
         reload 5s
-        log
     }
 }
