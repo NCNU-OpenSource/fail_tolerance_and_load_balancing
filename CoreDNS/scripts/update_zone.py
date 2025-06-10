@@ -17,10 +17,9 @@ soa_template = """$ORIGIN .
 $TTL 5      ; 1 day
 <你的 Domain name>             IN SOA  ns2.<你的 Domain name>. <你的電子信箱>. (
                                 {serial} ; serial
-                                10       ; refresh (1 hour)
                                 5       ; retry (30 minutes)
                                 300    ; expire (2 weeks)
-                                86400      ; minimum (1 day)
+                                5      ; minimum (1 day)
                                 )
 <你的 Domain name>             IN NS      ns1.<你的 Domain name>.
 <你的 Domain name>             IN NS      ns2.<你的 Domain name>.
