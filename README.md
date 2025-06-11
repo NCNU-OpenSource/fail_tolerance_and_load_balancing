@@ -386,11 +386,12 @@ server {
 作業系統 : Windows 11
 虛擬機架設 : VMware
 網路線、網卡 : 2 張乙太網卡、 2 條網路線(有一條是企資網彥錚老師帶我們實作的，沒想到會在這時候派上用場)
-![photo_2025-06-07_18-09-49](https://hackmd.io/_uploads/rkiGe5bXgg.jpg)
-![photo_2025-06-07_18-09-57](https://hackmd.io/_uploads/SyN7l9-7gl.jpg)
+
+![image](https://hackmd.io/_uploads/rkiGe5bXgg.jpg)
+![image](https://hackmd.io/_uploads/SyN7l9-7gl.jpg)
 
 Switch : 用到 [Moli](https://moli.rocks/) 裡面置放已久的 Zyxel GS2200-24 ，有支援 IEEE 802.3ad 協議
-![photo_2025-06-07_16-33-47](https://hackmd.io/_uploads/SJZYtObmxl.jpg)  
+![image](https://hackmd.io/_uploads/SJZYtObmxl.jpg)
 {%youtube OYuDm42lVqw %}
 ### 在 Switch 上設定 LACP
 目標：
