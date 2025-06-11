@@ -370,14 +370,441 @@ server {
 - 也可以把 DNS server 或是後端的 serveer 關掉，網頁還是不會斷線
 - 我們的成品：[kunzo.space](https://kunzo.space/)
 
+
+### Network Bonding for Linux :
+
+前言:
+其實剛開始做這個的目的是為了補充我們期中報告中提到的 故障轉移（Failover） ，希望透過實際操作，證明這不只是一個理論概念，而是可以實際應用在真實環境中的技術。剛好我對於 Link Aggregation 這塊也很好奇，就順勢結合一起實作了看看。
+
+這篇會一步步記錄從 Switch 設定、虛擬機網卡橋接、到 Linux 上的 Bonding 設定，到最後由影片呈現故障轉移的結果。
+
+順便提一下外話，在實作上 Switch 的部分原本打算用 RS232 to USB 再用 Putty 下指令的進行操作的，但後來確實找不到相關說明書，只好用 Web GUI 去設定。
+
+特別感謝 [jiazheng](https://hackmd.io/@jiazheng) 學長在這部分提供了許多協助與建議，讓我能夠更順利完成整個測試流程。
+
+### 環境、硬體需求
+作業系統 : Windows 11
+虛擬機架設 : VMware
+網路線、網卡 : 2 張乙太網卡、 2 條網路線(有一條是企資網彥錚老師帶我們實作的，沒想到會在這時候派上用場)
+![photo_2025-06-07_18-09-49](https://hackmd.io/_uploads/rkiGe5bXgg.jpg)
+![photo_2025-06-07_18-09-57](https://hackmd.io/_uploads/SyN7l9-7gl.jpg)
+
+Switch : 用到 [Moli](https://moli.rocks/) 裡面置放已久的 Zyxel GS2200-24 ，有支援 IEEE 802.3ad 協議
+![photo_2025-06-07_16-33-47](https://hackmd.io/_uploads/SJZYtObmxl.jpg)  
+{%youtube OYuDm42lVqw %}
+### 在 Switch 上設定 LACP
+目標：
+設定交換器的 Link Aggregation，把 port4 和 port6 聚合成一組 TrunkGroup（T1），讓 VMware 上的 Linux Bonding 模式和這組 Trunk 對接。
+
+
+1. 開始 → 設定
+![image](https://hackmd.io/_uploads/B1RJgaTGge.png)
+2. 網路和網際網路 → 乙太網路
+![image](https://hackmd.io/_uploads/HySRya6Mge.png)
+3. (IP 指派) 編輯 → 手動
+![image](https://hackmd.io/_uploads/Hy4fga6zxe.png)
+4. (IPv4) 開啟 → 填相關資料 → 儲存
+![image](https://hackmd.io/_uploads/B1cHpd-7gg.png)
+    * IP 位址：填 192.168.1.100
+    * 子網路遮罩：填單位網路遮罩，例：255.255.255.0
+    * 閘道：填192.168.1.1
+    * DNS 分為「慣用」和「其他」，慣用我是填中華電信的 168.95.1.1，其他則是填 Google 的 8.8.8.8
+5. 設定好後可以去瀏覽器輸入 http://192.168.1.1 ， 帳號預設 admin 密碼預設是 1234
+ ![image](https://hackmd.io/_uploads/B1__E6azge.png)
+6. 進去後應該可以看到 Web 介面
+![image](https://hackmd.io/_uploads/r11w2yCGll.png)
+7. 在左邊欄位找到 Advanced Application → Link Aggreation
+![image](https://hackmd.io/_uploads/SyvFEapfgl.png)
+8. 在這裡我是把 port4 跟 port6 變成一個 TrunkGroup
+![image](https://hackmd.io/_uploads/HyShh1Azxx.png)
+9. 滑到底有個 Apply 點下去
+ ![image](https://hackmd.io/_uploads/rJlaETTfll.png)
+10. 之後回到畫面有上角有個 Save 點下去
+![image](https://hackmd.io/_uploads/rkOaVa6zgx.png)
+11. 可以看到有 Link Aggreation Status 底下是我們設定好的 T1 Group
+![image](https://hackmd.io/_uploads/By2bTyRMlx.png)
+
+到這邊 Switch 設定就結束了，剩下虛擬機上網卡 Bonding 設定
+____
+
+### VMware Bonding 設定
+確認好上述步驟都做好後，需將兩張實體網卡都橋接（bridged）給 VM 使用
+
+1. 在 VmWare 下的環境設定上方 VM → Setting 
+![image](https://hackmd.io/_uploads/HyQRKTpGgx.png)
+2. Network Adapter 改成 Bridged 並勾選 Replicate physical Network Connetcion State
+![image](https://hackmd.io/_uploads/BJb7cTTGgl.png)
+3. USB Controller → USB compatibility 從 USB3.1 改成 USB2.0
+![image](https://hackmd.io/_uploads/SkQYZRpzgl.png)
+4. 用 `lsusb` 這個指令在虛擬機上安裝 USB 驅動 
+
+- 橋接完後把網卡從 Host 轉給 VM → Removable Devices → 你的網卡 → Connection(Disconnection from Host)
+![image](https://hackmd.io/_uploads/S1fa6ppMgg.png)
+- 順便看一下 Host 上裝置管理員有沒有把 2 張網卡轉過來
+![image](https://hackmd.io/_uploads/r14_wJ0zlg.png)
+- 虛擬機內部，用 `ip link show` 可以看到 `enx7cc...` 跟 `enx000...` 這兩張網卡
+![image](https://hackmd.io/_uploads/HybHBYbmll.png)
+
+5. 接下去把網卡做 bonding，用 `sudo vim /etc/netplan/01-netcfg.yaml`
+    ```
+    network:
+      version: 2
+      renderer: networkd
+      ethernets:
+        enx7cc2c643d78a: {} # 定義第一張實體網卡（MAC: 00:0e:c6:e6:9d:dc）
+        enx000ec6e69ddc: {} # 定義第二張實體網卡（MAC: 7c:c2:c6:43:d7:8a）
+
+      bonds:
+        bond0:   # 建立一個邏輯網卡 bond0
+          interfaces:
+            - enx7cc2c643d78a
+            - enx000ec6e69ddc
+          parameters:
+            mode: 802.3ad # 啟用 LACP( bonding mode 4)
+            mii-monitor-interval: 100  # 每 100ms 檢查一次網卡連線狀態 
+            transmit-hash-policy: layer2
+            lacp-rate: fast
+          dhcp4: no
+          dhcp6: no
+          addresses:
+            - 192.168.1.100/24
+          gateway4: 192.168.1.1
+          nameservers:
+
+    ```  
+6. 好了之後用 `sudo netplan apply`
+7. 再 `ip link show` 一次，看一下剛設定好的 `bond0` 這張網卡有沒有出現，並且 `state` 是 `up`
+![image](https://hackmd.io/_uploads/HyRFLFW7xg.png)
+_____
+
+### 實際測試
+
+1. 先把 `ens33 `這張網卡關掉，只留下要測試用的 2 張網卡做測試
+ ` sudo ip link set ens33 down`
+2. ping google 的 DNS 看看能不能上網 
+ `ping 8.8.8.8`
+3. 交互測試插拔網路線，看在一條網路線拔除的情況下是否還能上網
+4. 影片
+{%youtube 0lxmoCRJgEM %}
+
+### 後來結合 Bonding 的發想
+原本只打算在做完以上設定後就打算把這台 VM 晾在一邊了，但後來有試過 Ngrok 跟 WireGuard 這兩個軟體，發現 WireGuard 可以讓 DigitalOcean 上的 VM 反向代理本地這台 VM 讓它提供 Web Services 。那再結合 DigitalOcean 上的另外一台 VM 並反向代理其中的 2 個 Container 就可以順利完成我們所要的高可用跟負載平衡了。
+
+大概架構如下:
+![structure](https://hackmd.io/_uploads/BJ6S047Xex.png)
+其中 Primary 跟 Secondary 的在做 Failover 是透過 Keepailved 來讓 VIP 做轉移，但有個淺在問題是當切換到 Secondary 後沒辦法去接手 Primary 後方的 Container。
+
+
+### 透過 WireGuard 讓本地 VM 與 DO VM 處於相同 VPN
+![user space (2)](https://hackmd.io/_uploads/ryr8oprmle.png)
+
+
+
+第一台 DigitalOcean VM
+1. 安裝 WireGuard：
+ `sudo apt install wireguard -y`
+2. 生成 WireGuard 金鑰對
+    `wg genkey | tee do_private.key | wg pubkey > do_public.key`
+3. 查看 Private Key（貼到 [Interface] 中）
+    `cat do_private.key`
+4. 查看 Public Key（提供給本地 VM）
+     `cat do_public.key`
+
+5. 編輯 WireGuard 設定檔，進去後可以看到 [Interface] 表示自己這台虛擬機
+`sudo vim /etc/wireguard/wg0.conf`
+    ```
+    [Interface]
+    PrivateKey = # 第三步驟產生的 private key
+    Address = 10.100.0.1/24  # 本地 WireGuard 的IP ，設你要的就好
+    ListenPort = 51820 # WireGuard 監聽的 port，預設通常是防火牆的 51820
+
+    [Peer]
+    PublicKey =  # 後端虛擬機產生的 public key
+    AllowedIPs = 10.100.0.2/32  # 後端虛擬機 WireGuard 設定的IP 
+    Endpoint =  X.X.X.X # 後端 VM 的IP
+    PersistentKeepalive = 25
+    ```
+6. 開啟 WireGuard 跟 防火牆
+`sudo wg-quick up wg0`
+`sudo ufw allow 51820/udp`
+7. IP forwarding 要打開
+`sudo sysctl -w net.ipv4.ip_forward=1`
+
+
+第二台後端 VM
+1. 安裝 WireGuard：
+ `sudo apt install wireguard -y`
+2. 生成 WireGuard 金鑰對
+    `wg genkey | tee do_private.key | wg pubkey > do_public.key`
+3. 查看 Private Key（貼到 [Interface] 中）
+    `cat do_private.key`
+4. 查看 Public Key（提供給 DO VM）
+     `cat do_public.key`
+5. 編輯 WireGuard 設定檔
+`sudo vim /etc/wireguard/wg0.conf`
+    ```
+    [Interface]
+    Address = 10.100.0.2/24
+    PrivateKey =  # 後端 VM 剛產生的 private key
+
+    [Peer]
+    PublicKey = # DO VM 的 public key
+    Endpoint = X.X.X.X:51820 # 填 DO VM 的 IP , e.g. 
+    AllowedIPs = 0.0.0.0/0
+    PersistentKeepalive = 25
+    ```
+6. 開啟 WireGuard，當虛擬機關機時要重新打開
+` sudo wg-quick up wg0`
+
+測試有沒有成功
+1. 從後端 VM ping DO VM
+`ping 10.100.0.1`    
+![image](https://hackmd.io/_uploads/BJAqiPQQxg.png)
+
+2. 從 DO VM ping 回來
+`ping 10.100.0.2`   
+![image](https://hackmd.io/_uploads/ryqxhDXmel.png)
+
+### 在後端 VM 中架設 Web Server 
+
+1. 安裝 Nginx
+  ` sudo apt install nginx -y`
+2. 啟動 Nginx
+`sudo systemctl start nginx`
+`sudo systemctl enable nginx`
+3. 修改 index.html 內容
+ `sudo vim /var/www/html/index.html` 
+    ```
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Bond0 Web Server</title>
+    </head>
+    <body>
+      <h1> bond0 Web Server - Backend's VM </h1>
+      <p>Nginx on LACP VM</p>
+    </body>
+    </html>
+    ```
+4. 可以回到 DO VM 看一下有沒有成功
+`curl http://10.100.0.2`
+![image](https://hackmd.io/_uploads/S1PQMOQXll.png)
+____
+
+### 在第二台 DO VM 架設 Reverse Proxy 回應使用者請求
+![user space](https://hackmd.io/_uploads/SkhEdd7mgx.png)
+
+1. 安裝 Nginx 
+  ` sudo apt install nginx -y`
+2. 啟動 Nginx
+`sudo systemctl start nginx`
+`sudo systemctl enable nginx`
+3. 安裝 Docker 
+`curl -fsSL https://get.docker.com -o get-docker.sh`
+`sudo sh ./get-docker.sh`
+4. 看看 Docker 是否安裝成功
+` sudo docker run hello-world`
+5. 建立兩個 Docker container
+- real1 container，監聽 port 8081
+`docker run -d --name real1 -p 8081:80 nginx`
+- 建立 real2 container，監聽 port 8082
+`docker run -d --name real2 -p 8082:80 nginx`
+6. 在 index.html 加上一些內容，方便辨識
+- real1 顯示 "Hello from real1"
+`docker exec real1 bash -c 'echo "Hello from real1" > /usr/share/nginx/html/index.html'`
+- real2 顯示 "Hello from real2"
+`docker exec real2 bash -c 'echo "Hello from real2" > /usr/share/nginx/html/index.html'`
+
+7. 設定 revesre proxy
+`sudo vim /etc/nginx/sites-available/reverse-proxy.conf`
+    ```
+    upstream backend {
+        server localhost:8081;
+        server localhost:8082;
+    }
+
+
+
+    server {
+            listen 80 default_server;
+            listen [::]:80 default_server;
+
+
+            root /var/www/html;
+
+            # Add index.php to the list if you are using PHP
+            index index.html index.htm index.nginx-debian.html;
+
+            server_name _;
+
+            location / {
+            proxy_pass http://backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;    }
+
+
+    }
+    ```
+8. 啟用設定
+` sudo ln -s /etc/nginx/sites-available/reverse-proxy.conf /etc/nginx/sites-enabled/default.conf `
+ 
+9. 重新載入 Nginx 套用設定
+`sudo systemctl reload nginx`
+
+10. 測試
+`curl http://localhost`
+
+
+### 用 KeepAlived 達成故障轉移
+
+此處參考了 [jiazheng](https://hackmd.io/@jiazheng) 學長的[負載平衡和高度可用性](https://hackmd.io/@ncnu-opensource/book/https%3A%2F%2Fhackmd.io%2FpLrUczzjQ_CUhcnPX2Xwhw%3Fview)，但 DigitalOcean 上 Floating IP 已改名叫做 Reserved IP，申請部分可以查看[官方文件](https://docs.digitalocean.com/products/networking/reserved-ips/how-to/create/)還有 [DigitalOcean token](https://docs.digitalocean.com/reference/api/create-personal-access-token/) 也要記得申請。最後 KeepAlived 設定檔的地方也有做變動，留意一下。
+
+
+1. 安裝 keepalived
+`sudo apt install keepalived`
+2. 接下來開始建立設定檔
+`sudo vim /etc/keepalived/keepalived.conf`
+    - Primary
+    ```
+        global_defs {
+        script_user root
+        enable_script_security
+    }
+
+    vrrp_script chk_nginx {
+        script "/usr/bin/pgrep nginx"
+        interval 2
+    }
+
+    vrrp_instance VI_1 {
+        interface eth0 # 注意這邊要看有 public ip 的網卡
+        state MASTER 
+        priority 150
+        virtual_router_id 33
+
+        unicast_src_ip X.X.X.X # 自己這台虛擬機 ip
+        unicast_peer {
+            X.X.X.X # backup ip 
+        }
+
+        authentication {
+            auth_type PASS
+            auth_pass password
+        }
+
+        virtual_ipaddress {
+            138.197.59.192/32 dev eth0 # 填申請下來的 reserved ip
+        }
+
+        track_script {
+            chk_nginx
+        }
+
+        notify_master /etc/keepalived/master.sh # 後面會run一個master.sh腳本
+    }
+    ```
+- Secondary 的地方
+
+    ```
+        global_defs {
+        script_user root
+        enable_script_security
+    }
+
+    vrrp_script chk_nginx {
+        script "/usr/bin/pgrep nginx"
+        interval 2
+    }
+
+    vrrp_instance VI_1 {
+        interface eth0
+        state BACKUP
+        priority 50
+        virtual_router_id 33
+        unicast_src_ip 143.198.3.150
+        unicast_peer {
+            142.93.186.3
+        }
+        authentication {
+            auth_type PASS
+            auth_pass password
+        }
+        virtual_ipaddress {
+            138.197.59.192/32 dev eth0
+        }
+        track_script {
+            chk_nginx
+        }
+        notify_master /etc/keepalived/master.sh
+    }
+    ```
+
+3. 下載 DigitalOcean 提供的 assign-ip 腳本
+    ```
+    cd /usr/local/bin
+    sudo curl -LO http://do.co/assign-ip
+    ```
+    下載完要加上執行權限：
+    `sudo chmod +x /usr/local/bin/assign-ip`
+4. 建立當主機掛掉時需要執行的腳本
+DO_TOKEN 變數要改成拿到的 API Token
+IP 變數要改成拿到的 Reserved IP
+`sudo vim /etc/keepalived/master.sh`
+
+    ```
+    #!/bin/bash
+    export DO_TOKEN='' # ''裡面改成你申請下來的 token 
+    IP='138.197.59.192' # 改成你申請下來的 reserved ip
+    ID=$(curl -s http://169.254.169.254/metadata/v1/id)HAS_FLOATING_IP=$(curl -s http://169.254.169.254/metadata/v1/floating_ip/ipv4/active)
+
+    if [ "$HAS_FLOATING_IP" = "false" ]; then
+        n=0
+        while [ $n -lt 10 ]
+        do
+            python3 /usr/local/bin/assign-ip $IP $ID && break
+            n=$((n+1))
+            sleep 3
+        done
+    fi
+    ```
+    :::info
+    注意這裡要先有安裝 python3，不然腳本會 run 不起來
+    ```
+    sudo apt install python3 python3-pip -y
+    pip3 install requests
+    ```
+    :::
+    
+5. 接下來讓 master.sh 可以被 keepalived 執行
+`sudo chmod +x /etc/keepalived/master.sh`
+
+6. 可以來啟動我們的 keepalived 了
+`sudo systemctl restart keepalived` 
+`sudo systemctl reload keepalived` 
+7. 測試當 Master 關掉時(可能會等個幾秒 VIP 才會轉過來)
+`sudo systemctl stop nginx`
+`curl http://138.197.59.192`
+![image](https://hackmd.io/_uploads/SJmWOaXQeg.png)
+ 是顯示出 Backup 後端 VM 的內容
+8. Backup 可以搭配 journal 來看比較好 debug
+`sudo journalctl -u keepalived -f`
+9. 再把 Master 回復，看看結果
+![image](https://hackmd.io/_uploads/S1nOOpX7xg.png)
+![image](https://hackmd.io/_uploads/Skg5_am7lx.png)
+
+{%youtube zv64v2An7gs %}
+
 ## 工作分配
 - 孫睿君：高可用 DNS Server 實作、 Nginx 負載平衡實作。
-
+- 羅智穎 : 處理 Switch 設定、 Linux Network Bonding 
 ## Refrence
 
 DNS and Nginx Load Balancing
 - [Configure Self-Hosted DNS Server: Step-by-Step Guide](https://hostedsoftware.org/blog/configure-self-hosted-dns-server-step-by-step-guide/)
 - [BobyGamer](https://github.com/NCNU-OpenSource/BobyGamer)
-
-
+- [Windows 11 中 IP 設定](https://chenmama.neocities.org/IP/11)
+- [Netowork Bonding for Linux](https://chtseng.wordpress.com/2022/09/30/netowork-bonding-for-linux/)
 
