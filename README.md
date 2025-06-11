@@ -388,43 +388,46 @@ server {
 網路線、網卡 : 2 張乙太網卡、 2 條網路線(有一條是企資網彥錚老師帶我們實作的，沒想到會在這時候派上用場)
 
 ![rkiGe5bXgg](https://github.com/user-attachments/assets/aac3e8f6-e0d3-45f4-82ea-e133ebea9891)
+![SyN7l9-7gl](https://github.com/user-attachments/assets/87d81a6f-2e5e-4534-85bb-62ee48c10779)
 
-![image](https://hackmd.io/_uploads/SyN7l9-7gl.jpg)
+
 
 Switch : 用到 [Moli](https://moli.rocks/) 裡面置放已久的 Zyxel GS2200-24 ，有支援 IEEE 802.3ad 協議
-![image](https://hackmd.io/_uploads/SJZYtObmxl.jpg)
-{%youtube OYuDm42lVqw %}
+![SJZYtObmxl](https://github.com/user-attachments/assets/ffc14ad7-b6e8-4988-9020-ea917f854f3d)
+
+
+{%youtube OYuDm42lVqw %}](https://www.youtube.com/watch?v=OYuDm42lVqw)
 ### 在 Switch 上設定 LACP
 目標：
 設定交換器的 Link Aggregation，把 port4 和 port6 聚合成一組 TrunkGroup（T1），讓 VMware 上的 Linux Bonding 模式和這組 Trunk 對接。
 
 
 1. 開始 → 設定
-![image](https://hackmd.io/_uploads/B1RJgaTGge.png)
+![B1RJgaTGge](https://github.com/user-attachments/assets/31244072-ca63-4d18-a2d6-41c8b8a91062)
 2. 網路和網際網路 → 乙太網路
-![image](https://hackmd.io/_uploads/HySRya6Mge.png)
+![HySRya6Mge](https://github.com/user-attachments/assets/1819c729-0a87-4550-9f4d-6e046ff856dc)
 3. (IP 指派) 編輯 → 手動
-![image](https://hackmd.io/_uploads/Hy4fga6zxe.png)
+![Hy4fga6zxe](https://github.com/user-attachments/assets/68000b2f-223e-4cf7-b786-2134e9f46825)
 4. (IPv4) 開啟 → 填相關資料 → 儲存
-![image](https://hackmd.io/_uploads/B1cHpd-7gg.png)
+![B1cHpd-7gg](https://github.com/user-attachments/assets/b50b32df-5a99-4a25-8ba0-703d7643009b)
     * IP 位址：填 192.168.1.100
     * 子網路遮罩：填單位網路遮罩，例：255.255.255.0
     * 閘道：填192.168.1.1
     * DNS 分為「慣用」和「其他」，慣用我是填中華電信的 168.95.1.1，其他則是填 Google 的 8.8.8.8
 5. 設定好後可以去瀏覽器輸入 http://192.168.1.1 ， 帳號預設 admin 密碼預設是 1234
- ![image](https://hackmd.io/_uploads/B1__E6azge.png)
+![B1__E6azge](https://github.com/user-attachments/assets/61693ae5-7852-4e72-a932-33f8f2996d49)
 6. 進去後應該可以看到 Web 介面
-![image](https://hackmd.io/_uploads/r11w2yCGll.png)
+![r11w2yCGll](https://github.com/user-attachments/assets/8b711beb-846f-477b-8cf4-840a3435b54b)
 7. 在左邊欄位找到 Advanced Application → Link Aggreation
-![image](https://hackmd.io/_uploads/SyvFEapfgl.png)
+![SyvFEapfgl](https://github.com/user-attachments/assets/311b98eb-d369-4105-8476-ef9fde10f608)
 8. 在這裡我是把 port4 跟 port6 變成一個 TrunkGroup
-![image](https://hackmd.io/_uploads/HyShh1Azxx.png)
+![HyShh1Azxx](https://github.com/user-attachments/assets/0134e04d-435c-4676-aea7-f26fbf02cf34)
 9. 滑到底有個 Apply 點下去
- ![image](https://hackmd.io/_uploads/rJlaETTfll.png)
+![rJlaETTfll](https://github.com/user-attachments/assets/d058c9c7-a538-4d5e-b7d3-5cc1ada5e252)
 10. 之後回到畫面有上角有個 Save 點下去
-![image](https://hackmd.io/_uploads/rkOaVa6zgx.png)
+![rkOaVa6zgx](https://github.com/user-attachments/assets/443860ab-5672-47fd-be1e-6adfbecc63e0)
 11. 可以看到有 Link Aggreation Status 底下是我們設定好的 T1 Group
-![image](https://hackmd.io/_uploads/By2bTyRMlx.png)
+![By2bTyRMlx](https://github.com/user-attachments/assets/27044f73-9d39-4d5e-baec-b82a619f02f7)
 
 到這邊 Switch 設定就結束了，剩下虛擬機上網卡 Bonding 設定
 ____
@@ -433,19 +436,22 @@ ____
 確認好上述步驟都做好後，需將兩張實體網卡都橋接（bridged）給 VM 使用
 
 1. 在 VmWare 下的環境設定上方 VM → Setting 
-![image](https://hackmd.io/_uploads/HyQRKTpGgx.png)
+![HyQRKTpGgx](https://github.com/user-attachments/assets/8bd4107c-fc61-45c9-b95e-2ac787ae6f1f)
 2. Network Adapter 改成 Bridged 並勾選 Replicate physical Network Connetcion State
-![image](https://hackmd.io/_uploads/BJb7cTTGgl.png)
+![BJb7cTTGgl](https://github.com/user-attachments/assets/30ffc970-7e94-4048-b3af-2d8ad0032683)
 3. USB Controller → USB compatibility 從 USB3.1 改成 USB2.0
-![image](https://hackmd.io/_uploads/SkQYZRpzgl.png)
+![SkQYZRpzgl](https://github.com/user-attachments/assets/186fc660-a757-48c3-b938-f75ad571ed0e)
 4. 用 `lsusb` 這個指令在虛擬機上安裝 USB 驅動 
 
 - 橋接完後把網卡從 Host 轉給 VM → Removable Devices → 你的網卡 → Connection(Disconnection from Host)
-![image](https://hackmd.io/_uploads/S1fa6ppMgg.png)
+![S1fa6ppMgg](https://github.com/user-attachments/assets/634e4d5b-812f-429c-a089-8f6ebfe86824)
+
 - 順便看一下 Host 上裝置管理員有沒有把 2 張網卡轉過來
-![image](https://hackmd.io/_uploads/r14_wJ0zlg.png)
+![r14_wJ0zlg](https://github.com/user-attachments/assets/17c7131e-3635-4cfb-9e23-18f8dfe8019d)
+
 - 虛擬機內部，用 `ip link show` 可以看到 `enx7cc...` 跟 `enx000...` 這兩張網卡
-![image](https://hackmd.io/_uploads/HybHBYbmll.png)
+![HybHBYbmll](https://github.com/user-attachments/assets/0596c498-860f-46fc-96b6-3147380d3b5a)
+
 
 5. 接下去把網卡做 bonding，用 `sudo vim /etc/netplan/01-netcfg.yaml`
     ```
@@ -476,7 +482,8 @@ ____
     ```  
 6. 好了之後用 `sudo netplan apply`
 7. 再 `ip link show` 一次，看一下剛設定好的 `bond0` 這張網卡有沒有出現，並且 `state` 是 `up`
-![image](https://hackmd.io/_uploads/HyRFLFW7xg.png)
+![HyRFLFW7xg](https://github.com/user-attachments/assets/5503c952-e751-4791-bac8-39f437f7a0d4)
+
 _____
 
 ### 實際測試
@@ -487,20 +494,19 @@ _____
  `ping 8.8.8.8`
 3. 交互測試插拔網路線，看在一條網路線拔除的情況下是否還能上網
 4. 影片
-{%youtube 0lxmoCRJgEM %}
+[{%youtube 0lxmoCRJgEM %}](https://www.youtube.com/watch?v=0lxmoCRJgEM)
 
 ### 後來結合 Bonding 的發想
 原本只打算在做完以上設定後就打算把這台 VM 晾在一邊了，但後來有試過 Ngrok 跟 WireGuard 這兩個軟體，發現 WireGuard 可以讓 DigitalOcean 上的 VM 反向代理本地這台 VM 讓它提供 Web Services 。那再結合 DigitalOcean 上的另外一台 VM 並反向代理其中的 2 個 Container 就可以順利完成我們所要的高可用跟負載平衡了。
 
 大概架構如下:
-![structure](https://hackmd.io/_uploads/BJ6S047Xex.png)
+![BJ6S047Xex](https://github.com/user-attachments/assets/c2558460-32df-486f-8d79-f66ad16245c8)
+
 其中 Primary 跟 Secondary 的在做 Failover 是透過 Keepailved 來讓 VIP 做轉移，但有個淺在問題是當切換到 Secondary 後沒辦法去接手 Primary 後方的 Container。
 
 
 ### 透過 WireGuard 讓本地 VM 與 DO VM 處於相同 VPN
-![user space (2)](https://hackmd.io/_uploads/ryr8oprmle.png)
-
-
+![ryr8oprmle](https://github.com/user-attachments/assets/0ea74617-6b7b-42db-97dd-78140d62e6a1)
 
 第一台 DigitalOcean VM
 1. 安裝 WireGuard：
@@ -561,11 +567,10 @@ _____
 測試有沒有成功
 1. 從後端 VM ping DO VM
 `ping 10.100.0.1`    
-![image](https://hackmd.io/_uploads/BJAqiPQQxg.png)
-
+![BJAqiPQQxg](https://github.com/user-attachments/assets/c85a6c00-ddbd-4d10-ae98-159369495a3c)
 2. 從 DO VM ping 回來
 `ping 10.100.0.2`   
-![image](https://hackmd.io/_uploads/ryqxhDXmel.png)
+![B1hIjn87lx](https://github.com/user-attachments/assets/f45dfabf-815d-4af2-a670-3029cdb740b3)
 
 ### 在後端 VM 中架設 Web Server 
 
@@ -591,11 +596,13 @@ _____
     ```
 4. 可以回到 DO VM 看一下有沒有成功
 `curl http://10.100.0.2`
-![image](https://hackmd.io/_uploads/S1PQMOQXll.png)
+![S1PQMOQXll](https://github.com/user-attachments/assets/a93107e0-1b59-424a-a096-ef726fe28628)
+
 ____
 
 ### 在第二台 DO VM 架設 Reverse Proxy 回應使用者請求
-![user space](https://hackmd.io/_uploads/SkhEdd7mgx.png)
+![SkhEdd7mgx](https://github.com/user-attachments/assets/fcd58336-b6ed-45a4-b904-96121f792387)
+
 
 1. 安裝 Nginx 
   ` sudo apt install nginx -y`
@@ -788,16 +795,20 @@ IP 變數要改成拿到的 Reserved IP
 `sudo systemctl reload keepalived` 
 7. 測試當 Master 關掉時(可能會等個幾秒 VIP 才會轉過來)
 `sudo systemctl stop nginx`
-`curl http://138.197.59.192`
-![image](https://hackmd.io/_uploads/SJmWOaXQeg.png)
+`curl http://138.19![SJmWOaXQeg](https://github.com/user-attachments/assets/f941cf69-4495-4b39-acf1-925052398755)
+7.59.192`
+![Uploading SJmWOaXQeg.png…]()
+
  是顯示出 Backup 後端 VM 的內容
 8. Backup 可以搭配 journal 來看比較好 debug
 `sudo journalctl -u keepalived -f`
 9. 再把 Master 回復，看看結果
-![image](https://hackmd.io/_uploads/S1nOOpX7xg.png)
-![image](https://hackmd.io/_uploads/Skg5_am7lx.png)
+![S1nOOpX7xg](https://github.com/user-attachments/assets/94697d2f-288b-4659-88b0-d27f125f4e67)
 
-{%youtube zv64v2An7gs %}
+![Skg5_am7lx](https://github.com/user-attachments/assets/a40c45a4-d072-4fad-ba3a-c8aa0784d980)
+
+影片連結
+[{%youtube zv64v2An7gs %}](https://www.youtube.com/watch?v=zv64v2An7gs&source_ve_path=Mjg2NjY)
 
 ## 工作分配
 - 孫睿君：高可用 DNS Server 實作、 Nginx 負載平衡實作。
