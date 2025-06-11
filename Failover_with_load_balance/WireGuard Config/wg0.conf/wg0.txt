@@ -1,0 +1,10 @@
+[Interface]
+PrivateKey = # 第三步驟產生的 private key
+Address = 10.100.0.1/24  # 本地 WireGuard 的IP ，設你要的就好
+ListenPort = 51820 # WireGuard 監聽的 port，預設通常是防火牆的 51820
+
+[Peer]
+PublicKey =  # 後端虛擬機產生的 public key
+AllowedIPs = 10.100.0.2/32  # 後端虛擬機 WireGuard 設定的IP 
+Endpoint =  X.X.X.X # 後端 VM 的IP
+PersistentKeepalive = 25

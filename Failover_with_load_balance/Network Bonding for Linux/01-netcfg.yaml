@@ -1,0 +1,24 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enx7cc2c643d78a: {} # 定義第一張實體網卡（MAC: 00:0e:c6:e6:9d:dc）
+    enx000ec6e69ddc: {} # 定義第二張實體網卡（MAC: 7c:c2:c6:43:d7:8a）
+
+  bonds:
+    bond0:   # 建立一個邏輯網卡 bond0
+      interfaces:
+        - enx7cc2c643d78a
+        - enx000ec6e69ddc
+      parameters:
+        mode: 802.3ad # 啟用 LACP( bonding mode 4)
+        mii-monitor-interval: 100  # 每 100ms 檢查一次網卡連線狀態 
+        transmit-hash-policy: layer2
+        lacp-rate: fast
+      dhcp4: no
+      dhcp6: no
+      addresses:
+        - 192.168.1.100/24
+      gateway4: 192.168.1.1
+      nameservers:
+
